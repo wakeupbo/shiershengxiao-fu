@@ -1,0 +1,18 @@
+{
+  "name": "shier-shengxiao",
+  "version": "0.2.0",
+  "private": true,
+  "description": "十二生肖 · 文字合成塔防，含网页端与微信/抖音小游戏适配、公网玩家对战房间服务",
+  "main": "server/online-server.js",
+  "scripts": {
+    "start": "node server/online-server.js",
+    "test": "node --test server/*.test.js test/*.test.js",
+    "sim": "node sim/run.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

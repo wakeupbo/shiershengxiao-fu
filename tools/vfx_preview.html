@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>十二生肖 · 攻击特效预览</title>
+  <style>
+    html, body { margin: 0; background: #1b1b1b; }
+    canvas { display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <!-- 开发预览：静态展示 6 位生肖武将的基础弹道 / 专属神器弹道 / 技能特效 -->
+  <canvas id="vcv" width="900" height="850"></canvas>
+  <script>
+    // 预先注入最小化的 ZY 环境（不启动主循环）
+    window.ZY = {
+      adapter: {
+        createOffCanvas: function (w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
+        storageGet: function () { return null; }, storageSet: function () {},
+        on: function () {}, raf: function () {}, vibrate: function () {},
+        DW: 750, DH: 1334
+      },
+      sfx: function () {}, sfxToggle: function () {}, sfxEnabled: function () { return false; },
+      UI: { toast: function () {} },
+      Battle: { fx: function () {} }
+    };
+  </script>
+  <script src="../js/config.js"></script>
+  <script src="../js/map.js"></script>
+  <script src="../js/render.js"></script>
+  <script src="../js/board.js"></script>
+  <script src="../js/battle.js"></script>
+  <script>
+    (function () {
+      var ctx = document.getElementById('vcv').getContext('2d');
+      var C = ZY.C, R = ZY.R, BT = ZY.Battle, B = ZY.Board;
+
+      // 布局占位（地图坐标换算用）
+      ZY.L = { cell: 46, mapX: 0, mapY: 0, mapW: 0, mapH: 0, benchX: 0, benchY: 0, benchSlot: 0, benchGap: 0, btnY: 0, topBar: 0 };
+      ZY.Map.resetUnlockable(0);
+      ZY.Map.ensureMarked();
+      ZY.G = { time: 1, bullets: [], effects: [], enemies: [], p: { units: {}, hearts: 3, mantou: 10 }, e: { units: {}, hearts: 3, mantou: 10 } };
+
+      var SKILL_FX = { '子鼠': 'ratwave', '丑牛': 'oxcharge', '寅虎': 'tigerclaw', '卯兔': 'moonflash', '辰龙': null, '巳蛇': 'poison' };
+      var SKILL_TXT = {
+        '子鼠': '鼠群突袭·贯穿直线', '丑牛': '蛮牛冲撞·范围眩晕', '寅虎': '猛虎扑杀·处决残敌',
+        '卯兔': '月兔疾跃·速射', '辰龙': '龙腾祥瑞·范围光环', '巳蛇': '毒蛇缠绕·减速中毒'
+      };
+
+      function drawBullet(hero, shape, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        if (shape) R.drawWeaponBullet(ctx, shape, C.WEAPON_QUALITY.orange.color, true, hero);
+        else R.heroBaseBullet(ctx, hero, 1);
+        ctx.restore();
+      }
+
+      ctx.fillStyle = '#f4eedd';
+      ctx.fillRect(0, 0, 900, 850);
+      ctx.fillStyle = '#a8402c';
+      R.font(ctx, 32, true);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('十二生肖 · 武将攻击特效预览', 450, 34);
+      R.font(ctx, 18, false);
+      ctx.fillStyle = '#6a5c42';
+      ctx.fillText('基础弹道      /      专属神器弹道      /      技能特效', 450, 66);
+
+      var y0 = 92, rowH = 122;
+      C.HEROES.forEach(function (h, idx) {
+        var hero = h.name;
+        var fx = C.HERO_FX[hero];
+        var weapon = null;
+        for (var i = 0; i < C.WEAPONS.length; i++) if (C.WEAPONS[i].owner === hero) { weapon = C.WEAPONS[i]; break; }
+        var y = y0 + idx * rowH;
+
+        ctx.fillStyle = (idx % 2 ? 'rgba(255,255,255,0.55)' : 'rgba(214,232,214,0.6)');
+        R.roundRect(ctx, 16, y, 868, rowH - 12, 10);
+        ctx.fill();
+
+        // 名称 / 神器 / 技能
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#7a2a1a';
+        R.font(ctx, 24, true);
+        ctx.fillText(hero, 30, y + 26);
+        ctx.fillStyle = '#6a5c42';
+        R.font(ctx, 16, false);
+        ctx.fillText(weapon ? weapon.name : '（无专属神器）', 30, y + 54);
+        R.font(ctx, 15, false);
+        ctx.fillText(SKILL_TXT[hero] || '', 30, y + 80);
+
+        // 基础弹道
+        drawBullet(hero, null, 210, y + 52);
+        // 专属神器弹道
+        if (weapon) drawBullet(hero, fx.weapon, 340, y + 52);
+
+        // 技能特效
+        ZY.G.effects = [];
+        ZY.G.bullets = [];
+        ZY.G.p.units = {};
+        ZY.G.e.units = {};
+        var exX = 590, exY = y + 52;
+        // 裁剪到本行卡片，避免大范围特效溢出到相邻行
+        ctx.save();
+        ctx.beginPath();
+        R.roundRect(ctx, 16, y - 3, 868, rowH - 6, 10);
+        ctx.clip();
+        if (SKILL_FX[hero]) {
+          BT.fx(SKILL_FX[hero], exX, exY, hero === '卯兔' ? 0 : (hero === '丑牛' ? 150 : 180), 180);
+          ZY.G.effects[0].t = ZY.G.effects[0].dur * 0.6;
+          BT.draw(ctx);
+        } else {
+          // 辰龙：放置半身触发盘龙光环绘制
+          ZY.L.cell = 32;
+          var cc = Math.round((exX - 16) / 32);
+          var rr = Math.round((exY - 16) / 32);
+          var key = cc + '_' + rr;
+          ZY.L.mapX = 0; ZY.L.mapY = 0;
+          ZY.G.p.units[key] = B.makeGeneralHalf('辰龙', '辰', 0, cc + 1 + '_' + rr, 1, 'p');
+          ZY.G.time = 1.2;
+          BT.draw(ctx);
+        }
+        ctx.restore();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>公网对战界面预览</title>
+  <style>
+    html, body { margin: 0; background: #1b1b1b; }
+    canvas { display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <!-- 开发预览：用固定的模拟在线状态复现「公网对战大厅 / 公网对战对局」画面，用于生成文档截图 -->
+  <!-- 用法：online_preview.html?shot=lobby  或  online_preview.html?shot=battle -->
+  <canvas id="vcv" width="750" height="1334" style="width:430px;height:auto"></canvas>
+  <script>
+    var SHOT = (typeof location !== 'undefined' && /shot=lobby/.test(location.search)) ? 'lobby' : 'battle';
+    window.ZY = {
+      adapter: {
+        createOffCanvas: function (w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; },
+        storageGet: function () { return null; }, storageSet: function () {},
+        on: function () {}, raf: function () { return 0; }, vibrate: function () {},
+        DW: 750, DH: 1334, hasScreen: false, listeners: { down: [], move: [], up: [] }
+      },
+      sfx: function () {}, sfxToggle: function () {}, sfxEnabled: function () { return true; },
+      UI: { toast: function () {} },
+      Battle: { fx: function () {} },
+      // 模拟在线状态（对局 / 大厅）
+      Online: {
+        isActive: function () { return SHOT !== 'lobby'; },
+        state: function () {
+          return {
+            lobbyOpen: SHOT === 'lobby', connected: true,
+            status: SHOT === 'lobby' ? '对手已加入，等待准备' : '对局中',
+            roomId: '19FB1C', pendingRoomId: null, ready: true,
+            peerConnected: true, peerName: '对手·乙',
+            user: { username: 'shengxiao_01', displayName: '生肖玩家', stats: { matches: 6, wins: 4, losses: 2, bestWave: 9 } },
+            room: {
+              id: '19FB1C', status: 'waiting',
+              players: [
+                { playerId: 'a', displayName: '生肖玩家', ready: true, connected: true },
+                { playerId: 'b', displayName: '对手·乙', ready: false, connected: true }
+              ]
+            }
+          };
+        },
+        inviteLink: function (id) { return 'http://localhost:8787/?room=' + id; }
+      }
+    };
+  </script>
+  <script src="../js/config.js"></script>
+  <script src="../js/rank.js"></script>
+  <script src="../js/map.js"></script>
+  <script src="../js/render.js"></script>
+  <script src="../js/weapon.js"></script>
+  <script src="../js/board.js"></script>
+  <script src="../js/enemies.js"></script>
+  <script src="../js/battle.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    (function () {
+      var ctx = document.getElementById('vcv').getContext('2d');
+      var C = ZY.C, B = ZY.Board;
+
+      if (SHOT === 'lobby') {
+        ZY.UI.drawStart(ctx); // lobbyOpen=true 时内部会叠加公网对战大厅
+        return;
+      }
+
+      ZY.Map.resetUnlockable(1); // 牛栏
+      ZY.Map.ensureMarked();
+
+      function side() {
+        return { mantou: 34, recruitCount: 2, bench: new Array(C.ECON.benchSize).fill(null), units: {}, hearts: 3, shakeT: 0 };
+      }
+      var G = ZY.G = {
+        scene: 'play', mode: 'online', online: true, time: 12,
+        wave: 3, waveState: 'idle', restTimer: 4.8, coinReward: 0, kills: 5,
+        bullets: [], effects: [], enemies: [],
+        onlinePeer: { name: '对手·乙', hearts: 3, wave: 3 },
+        p: side(), e: side()
+      };
+
+      // 备战席
+      G.p.bench[0] = B.makeSoldier('爪', 2);
+      G.p.bench[1] = B.makeSoldier('翼', 1);
+      G.p.bench[2] = B.makeFrag('子');
+      G.p.bench[3] = B.makeShovel();
+      G.e.bench[0] = B.makeSoldier('牙', 2);
+
+      // 阵地单位（玩家侧：一对辰龙 + 爪/翼/角）
+      var pb = ZY.Map.buildOf('p');
+      function at(i) { return pb[i][0] + '_' + pb[i][1]; }
+      G.p.units[at(0)] = B.makeSoldier('爪', 3);
+      G.p.units[at(1)] = B.makeSoldier('翼', 2);
+      G.p.units[at(2)] = B.makeSoldier('角', 2);
+      G.p.units[at(3)] = B.makeGeneralHalf('辰龙', '辰', 0, at(4), 2, 'p');
+      G.p.units[at(4)] = B.makeGeneralHalf('辰龙', '龙', 1, at(3), 2, 'p');
+
+      // 敌方单位
+      var eb = ZY.Map.buildOf('e');
+      G.e.units[eb[0][0] + '_' + eb[0][1]] = B.makeSoldier('牙', 2);
+
+      // 行进中的敌人
+      var pts = ZY.Map.pathPoints('p');
+      var defs = [
+        { seg: 2, t: 0.3, ch: '狸', hp: 42 }, { seg: 3, t: 0.6, ch: '狸', hp: 60 },
+        { seg: 5, t: 0.2, ch: '狐', hp: 120 }, { seg: 6, t: 0.7, ch: '豺', hp: 200 }
+      ];
+      defs.forEach(function (d) {
+        var a = pts[d.seg], b = pts[Math.min(d.seg + 1, pts.length - 1)];
+        var x = a.x + (b.x - a.x) * d.t, y = a.y + (b.y - a.y) * d.t;
+        G.enemies.push({
+          side: 'p', type: 'zei', ch: d.ch, boss: false,
+          hp: d.hp, maxHp: 260, spd: 60, size: 40, seg: d.seg, segT: d.t,
+          x: x, y: y, slowT: 0, stunT: 0, flashT: 0, dead: false
+        });
+      });
+      // 一个领主
+      var bp = pts[4];
+      G.enemies.push({ side: 'p', type: 'boss', ch: '年', boss: true, hp: 700, maxHp: 1100, spd: 40, size: 60, seg: 4, segT: 0.4, x: bp.x, y: bp.y, slowT: 0, stunT: 0, flashT: 0, dead: false });
+
+      // 一颗飞行中的弹道 + 一个技能特效
+      G.bullets.push({ x: pts[2].x + 20, y: pts[2].y - 12, ang: 2.6, hero: '辰龙', gold: true, dmg: 40, target: G.enemies[1] });
+      ZY.Battle.fx('poison', pts[3].x, pts[3].y);
+      G.effects[0].t = G.effects[0].dur * 0.5;
+
+      ZY.Main.drawPlay(ctx);
+    })();
+  </script>
+</body>
+</html>
