@@ -212,140 +212,316 @@
   // ---- 开始界面 ----
   UI.drawStart = function (ctx) {
     var DW = A.DW, DH = A.DH;
-    R.paper(ctx, DW, DH);
-
-    // 顶部：头像框 + 仙桃币
-    ctx.save();
-    R.avatar(ctx, 78, 72, 42, UI.currentAvatar(), false);
-    // 头像点击区域（圆形按钮）
-    UI.buttons.avatar = { x: 36, y: 30, w: 84, h: 84 };
-    // 仙桃胶囊
-    ctx.fillStyle = 'rgba(50,40,28,0.85)';
-    R.roundRect(ctx, 140, 44, 240, 52, 26);
-    ctx.fill();
-    R.bun(ctx, 172, 70, 20);
-    ctx.fillStyle = '#f2ead2';
-    R.font(ctx, 30, true);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(A.storageGet('zy_coin') || 0), 290, 71);
-    ctx.restore();
-
-    // 标题 + 副标题
-    ctx.save();
-    R.font(ctx, 96, true);
-    ctx.fillStyle = '#a8402c';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.strokeStyle = 'rgba(60,20,10,0.35)';
-    ctx.lineWidth = 3;
-    ctx.fillText('十二生肖', DW / 2, DH * 0.20);
-    ctx.strokeText('十二生肖', DW / 2, DH * 0.20);
-    R.font(ctx, 26, true);
-    ctx.strokeStyle = 'rgba(90,60,20,0.35)';
-    ctx.fillStyle = '#8a6a10';
-    ctx.fillText(C.GAME_SLOGAN, DW / 2, DH * 0.20 - 74);
-    // 段位（炫彩渐变）
-    R.font(ctx, 34, true);
-    var prog = ZY.Rank.load();
-    var ry = DH * 0.20 + 78;
-    var rGrad = ctx.createLinearGradient(DW / 2 - 120, ry, DW / 2 + 120, ry);
-    rGrad.addColorStop(0, '#e8c53a');    // 金
-    rGrad.addColorStop(0.5, '#e84858');  // 红
-    rGrad.addColorStop(1, '#a85ef0');    // 紫
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(60,20,10,0.4)';
-    ctx.strokeText(prog.rankName, DW / 2, ry);
-    ctx.fillStyle = rGrad;
-    ctx.fillText(prog.rankName, DW / 2, ry);
-    // 星级
-    for (var i = 0; i < C.STARS_PER_RANK; i++) {
-      R.star(ctx, DW / 2 - 128 + i * 64, DH * 0.20 + 140, 26, i < prog.stars);
-    }
-    ctx.restore();
-
-    // 中央装饰阵盘
-    ctx.save();
-    var by = DH * 0.46, bw = 440, bh = 170;
     var t = ZY.frameTime ? ZY.frameTime() : 0;
-    ctx.translate(DW / 2, by);
-    ctx.transform(1, 0, -0.28, 0.82, 0, 0); // 透视斜切
-    ctx.fillStyle = '#f2eee0';
-    R.roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 8);
-    ctx.fill();
-    ctx.strokeStyle = '#3a3126';
-    ctx.lineWidth = 5;
-    R.roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 8);
-    ctx.stroke();
-    for (var gx = 1; gx < 4; gx++) {
+    var centerX = DW / 2;
+    var emblemY = DH * 0.505;
+    var emblemR = Math.min(DW * 0.335, DH * 0.17);
+
+    // 深色夜幕、柔和光晕与画布内装饰，避免依赖 DOM 或外部图片资源。
+    ctx.save();
+    var bg = ctx.createLinearGradient(0, 0, DW, DH);
+    bg.addColorStop(0, '#07151c');
+    bg.addColorStop(0.48, '#102b35');
+    bg.addColorStop(1, '#07151e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, DW, DH);
+    var glow = ctx.createRadialGradient(centerX, emblemY, 8, centerX, emblemY, DW * 0.72);
+    glow.addColorStop(0, 'rgba(41,111,116,0.32)');
+    glow.addColorStop(0.62, 'rgba(16,43,53,0.14)');
+    glow.addColorStop(1, 'rgba(3,10,16,0.55)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, DW, DH);
+
+    for (var dust = 0; dust < 72; dust++) {
+      var dx = (dust * 193 + 47) % DW;
+      var dy = (dust * 317 + 91) % Math.ceil(DH);
+      var pulse = 0.28 + (Math.sin(t * 1.5 + dust) + 1) * 0.2;
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = dust % 4 === 0 ? '#f4d77d' : '#d3d8c6';
       ctx.beginPath();
-      ctx.moveTo(-bw / 2 + gx * bw / 4, -bh / 2);
-      ctx.lineTo(-bw / 2 + gx * bw / 4, bh / 2);
-      ctx.lineWidth = 2; ctx.stroke();
+      ctx.arc(dx, dy, dust % 5 === 0 ? 2 : 1.2, 0, Math.PI * 2);
+      ctx.fill();
     }
-    // 草垫
-    ctx.strokeStyle = 'rgba(110,130,90,0.8)';
+    ctx.globalAlpha = 1;
+
+    // 古铜鎏金的双层边框与四角回纹。
+    ctx.strokeStyle = 'rgba(191,155,82,0.82)';
     ctx.lineWidth = 3;
-    for (var g2 = 0; g2 < 40; g2++) {
-      var ga = g2 / 40 * Math.PI * 2;
+    R.roundRect(ctx, 12, 12, DW - 24, DH - 24, 34);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(221,190,119,0.34)';
+    ctx.lineWidth = 1;
+    R.roundRect(ctx, 22, 22, DW - 44, DH - 44, 28);
+    ctx.stroke();
+    for (var corner = 0; corner < 4; corner++) {
+      ctx.save();
+      ctx.translate(corner % 2 ? DW - 36 : 36, corner > 1 ? DH - 36 : 36);
+      ctx.rotate((corner > 1 ? Math.PI : 0) + (corner % 2 ? Math.PI / 2 : 0));
+      ctx.strokeStyle = 'rgba(213,177,99,0.72)';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(Math.cos(ga) * (bw / 2 + 8), Math.sin(ga) * (bh / 2 + 8));
-      ctx.lineTo(Math.cos(ga) * (bw / 2 + 26), Math.sin(ga) * (bh / 2 + 20));
+      ctx.moveTo(0, 25);
+      ctx.lineTo(0, 5);
+      ctx.quadraticCurveTo(0, 0, 5, 0);
+      ctx.lineTo(25, 0);
+      ctx.moveTo(5, 0); ctx.lineTo(5, 12); ctx.lineTo(17, 12);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 云纹用低对比度线条点缀两侧，不干扰按钮与游戏文字。
+    for (var cloudSide = 0; cloudSide < 2; cloudSide++) {
+      var cloudX = cloudSide ? DW - 74 : 74;
+      var cloudY = DH * 0.37;
+      ctx.strokeStyle = 'rgba(154,184,178,0.18)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(cloudX, cloudY, 28, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.arc(cloudX + (cloudSide ? -27 : 27), cloudY - 12, 20, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.arc(cloudX + (cloudSide ? -55 : 55), cloudY, 28, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cloudX - 54, cloudY + 1);
+      ctx.quadraticCurveTo(cloudX, cloudY + 24, cloudX + 54, cloudY + 1);
       ctx.stroke();
     }
     ctx.restore();
-    // 守将（福字菱形）+ 金环 + 示例令牌
-    var monkX = DW / 2, monkY = by - 26, monkS = 110;
+
+    // 顶栏：可交互头像、仙桃余额和当前段位进度。
     ctx.save();
-    // 金环（生肖刻度）先画在守将背后，拿到摆动相位
-    var pokePhase = R.ornament(ctx, monkX, monkY, 132, t);
-    // 守将「福」
-    R.monk(ctx, monkX, monkY, monkS, 3, 3, false, t, pokePhase);
-    // 示例令牌：金色武将「子鼠」+ 玉牌兵种「爪」
-    R.livingTile(ctx, monkX - 150, monkY + 98, 78, '子鼠', 'general', t);
-    R.livingTile(ctx, monkX + 150, monkY + 98, 78, '爪', 'monk', t);
+    R.avatar(ctx, 78, 72, 42, UI.currentAvatar(), false);
+    UI.buttons.avatar = { x: 34, y: 28, w: 88, h: 88 };
+    ctx.fillStyle = 'rgba(9,17,22,0.88)';
+    R.roundRect(ctx, 140, 43, 250, 58, 29);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(207,175,105,0.72)';
+    ctx.lineWidth = 2;
+    R.roundRect(ctx, 140, 43, 250, 58, 29);
+    ctx.stroke();
+
+    // 仙桃图标。
+    ctx.save();
+    ctx.translate(174, 70);
+    ctx.fillStyle = '#d94835';
+    ctx.beginPath();
+    ctx.ellipse(-4, 2, 13, 15, -0.4, 0, Math.PI * 2);
+    ctx.ellipse(6, 2, 12, 15, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f48155';
+    ctx.beginPath();
+    ctx.ellipse(-7, -2, 4, 6, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#7d9d50';
+    ctx.beginPath();
+    ctx.ellipse(4, -14, 8, 4, -0.5, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
 
-    // 开始按钮
-    UI.buttons.start = { x: DW / 2 - 190, y: DH * 0.64, w: 380, h: 96, label: '单人闯关', fs: 40 };
-    R.redButton(ctx, UI.buttons.start);
-    UI.buttons.online = { x: DW / 2 - 190, y: DH * 0.64 + 112, w: 380, h: 88, label: '公网大厅', fs: 36 };
-    R.darkButton(ctx, UI.buttons.online);
-    // 交叉双剑装饰
-    ctx.save();
-    ctx.translate(DW / 2, DH * 0.64 - 34);
-    R.font(ctx, 52, false);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#5a6a78';
-    ctx.fillText('⚔', 0, 0);
+    ctx.fillStyle = '#f4e8c5';
+    R.font(ctx, 30, true);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(A.storageGet('zy_coin') || 0), 215, 72);
+
+    var prog = ZY.Rank.load();
+    var progressY = 145;
+    var progressX = 102;
+    var progressW = DW - 204;
+    ctx.strokeStyle = 'rgba(193,159,91,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(68, progressY);
+    ctx.lineTo(progressX, progressY);
+    ctx.moveTo(progressX + progressW, progressY);
+    ctx.lineTo(DW - 68, progressY);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(7,15,19,0.8)';
+    R.roundRect(ctx, progressX, progressY - 7, progressW, 14, 7);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(202,171,102,0.78)';
+    ctx.lineWidth = 2;
+    R.roundRect(ctx, progressX, progressY - 7, progressW, 14, 7);
+    ctx.stroke();
+    var progressRatio = Math.max(0, Math.min(1, (prog.stars || 0) / C.STARS_PER_RANK));
+    var fillGrad = ctx.createLinearGradient(progressX, 0, progressX + progressW, 0);
+    fillGrad.addColorStop(0, '#a77b31');
+    fillGrad.addColorStop(1, '#f0d486');
+    ctx.fillStyle = fillGrad;
+    if (progressRatio > 0) {
+      R.roundRect(ctx, progressX + 3, progressY - 4, (progressW - 6) * progressRatio, 8, 4);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#dfc17a';
+    ctx.beginPath();
+    ctx.arc(DW / 2, progressY, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#14252a';
+    ctx.beginPath();
+    ctx.arc(DW / 2, progressY, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f0d486';
+    R.font(ctx, 17, true);
+    ctx.textAlign = 'center';
+    ctx.fillText(prog.rankName, DW / 2, progressY + 29);
     ctx.restore();
 
-    // 武器库入口按钮（右下角，上移100左移50）
-    var weaponUnlocked = ZY.Weapon && ZY.Weapon.isLibraryUnlocked && ZY.Weapon.isLibraryUnlocked();
-    UI.buttons.weaponLib = { x: DW - 250, y: DH - 176, w: 180, h: 56, label: weaponUnlocked ? '兵器库 ⚔' : '兑换兵器', fs: 28 };
-    R.redButton(ctx, UI.buttons.weaponLib);
+    // 主标题和副标题：鎏金字配暗色描边，突出参考图的中式题签感。
+    ctx.save();
+    R.font(ctx, 88, true);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = 'rgba(49,31,15,0.9)';
+    ctx.strokeText('十二生肖', centerX, DH * 0.225);
+    var titleGrad = ctx.createLinearGradient(centerX, DH * 0.18, centerX, DH * 0.27);
+    titleGrad.addColorStop(0, '#fff0b2');
+    titleGrad.addColorStop(0.46, '#e3bb68');
+    titleGrad.addColorStop(1, '#a87531');
+    ctx.fillStyle = titleGrad;
+    ctx.fillText('十二生肖', centerX, DH * 0.225);
+    ctx.fillStyle = '#e9d8a5';
+    ctx.strokeStyle = 'rgba(194,157,85,0.7)';
+    ctx.lineWidth = 1;
+    R.font(ctx, 25, true);
+    ctx.fillText('— 文字合成塔防 —', centerX, DH * 0.285);
+    ctx.restore();
 
-    var bestWave = parseInt(A.storageGet('zy_best') || '0', 10);
-    if (bestWave > 0) {
-      ctx.save();
-      R.font(ctx, 26, false);
-      ctx.fillStyle = '#6a5c42';
+    // 中央生肖阵盘：复用游戏内守将与令牌绘制，保持风格和资产一致。
+    ctx.save();
+    var ringGlow = ctx.createRadialGradient(centerX, emblemY, 18, centerX, emblemY, emblemR * 1.22);
+    ringGlow.addColorStop(0, 'rgba(22,72,77,0.12)');
+    ringGlow.addColorStop(0.72, 'rgba(24,72,81,0.42)');
+    ringGlow.addColorStop(1, 'rgba(13,33,42,0)');
+    ctx.fillStyle = ringGlow;
+    ctx.beginPath();
+    ctx.arc(centerX, emblemY, emblemR * 1.22, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(212,174,97,0.72)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(centerX, emblemY, emblemR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(200,170,105,0.42)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(centerX, emblemY, emblemR * 0.84, 0, Math.PI * 2);
+    ctx.stroke();
+    for (var tick = 0; tick < 48; tick++) {
+      var tickAngle = tick / 48 * Math.PI * 2;
+      var tickInner = emblemR * (tick % 4 === 0 ? 0.91 : 0.95);
+      ctx.strokeStyle = tick % 4 === 0 ? 'rgba(234,202,126,0.86)' : 'rgba(190,161,100,0.52)';
+      ctx.lineWidth = tick % 4 === 0 ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(centerX + Math.cos(tickAngle) * tickInner, emblemY + Math.sin(tickAngle) * tickInner);
+      ctx.lineTo(centerX + Math.cos(tickAngle) * emblemR, emblemY + Math.sin(tickAngle) * emblemR);
+      ctx.stroke();
+    }
+
+    var ornamentPhase = R.ornament(ctx, centerX, emblemY, emblemR * 0.58, t);
+    R.monk(ctx, centerX, emblemY, Math.min(148, emblemR * 0.72), 0, 3, false, t, ornamentPhase);
+
+    var zodiac = [
+      ['子鼠', 0.02], ['丑牛', 0.98], ['寅虎', 2.02],
+      ['卯兔', 2.98], ['辰龙', 4.02], ['巳蛇', 4.98]
+    ];
+    for (var zi = 0; zi < zodiac.length; zi++) {
+      var zAngle = zodiac[zi][1] - Math.PI / 2;
+      var tokenX = centerX + Math.cos(zAngle) * emblemR * 0.78;
+      var tokenY = emblemY + Math.sin(zAngle) * emblemR * 0.78;
+      var tokenR = 29;
+      ctx.fillStyle = zi % 2 === 0 ? '#173d48' : '#76572a';
+      ctx.beginPath();
+      ctx.arc(tokenX, tokenY, tokenR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = zi % 2 === 0 ? '#d5bd7c' : '#f0d080';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(tokenX, tokenY, tokenR - 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#fff0ca';
+      R.font(ctx, 17, true);
       ctx.textAlign = 'center';
-      ctx.fillText('最佳战绩：第 ' + bestWave + ' 波', DW / 2, DH * 0.64 + 236);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(zodiac[zi][0], tokenX, tokenY);
+    }
+    ctx.restore();
+
+    // 主入口与副入口按参考图做玉石绿、深色金边按钮。
+    function jadeButton(button, primary) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      R.roundRect(ctx, button.x, button.y + 7, button.w, button.h, 18);
+      ctx.fill();
+      var buttonGrad = ctx.createLinearGradient(0, button.y, 0, button.y + button.h);
+      if (primary) {
+        buttonGrad.addColorStop(0, '#c7d9ae');
+        buttonGrad.addColorStop(0.45, '#76977d');
+        buttonGrad.addColorStop(1, '#385c56');
+      } else {
+        buttonGrad.addColorStop(0, '#31434a');
+        buttonGrad.addColorStop(1, '#17282f');
+      }
+      ctx.fillStyle = buttonGrad;
+      R.roundRect(ctx, button.x, button.y, button.w, button.h, 18);
+      ctx.fill();
+      ctx.strokeStyle = primary ? '#dfca8c' : '#a88c55';
+      ctx.lineWidth = 3;
+      R.roundRect(ctx, button.x + 2, button.y + 2, button.w - 4, button.h - 4, 16);
+      ctx.stroke();
+      ctx.strokeStyle = primary ? 'rgba(238,239,211,0.52)' : 'rgba(213,188,132,0.32)';
+      ctx.lineWidth = 1;
+      R.roundRect(ctx, button.x + 8, button.y + 8, button.w - 16, button.h - 16, 12);
+      ctx.stroke();
+      R.font(ctx, button.fs, true);
+      ctx.fillStyle = primary ? '#fff2cf' : '#e6d6b5';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(button.label, button.x + button.w / 2, button.y + button.h / 2 - 1);
       ctx.restore();
     }
+
+    var mainButtonW = Math.min(390, DW - 96);
+    UI.buttons.start = {
+      x: (DW - mainButtonW) / 2, y: DH * 0.755,
+      w: mainButtonW, h: 82, label: '单人闯关', fs: 38
+    };
+    jadeButton(UI.buttons.start, true);
+    UI.buttons.online = {
+      x: (DW - mainButtonW) / 2, y: DH * 0.835,
+      w: mainButtonW, h: 72, label: '公网大厅', fs: 32
+    };
+    jadeButton(UI.buttons.online, false);
+
+    var bestWave = parseInt(A.storageGet('zy_best') || '0', 10);
+    var status = '';
     if (ZY.Online) {
       var online = ZY.Online.state();
       if (!online.lobbyOpen && (online.status || online.roomId)) {
-        ctx.save();
-        R.font(ctx, 24, true);
-        ctx.fillStyle = online.connected ? '#6a5c42' : '#8a3a28';
-        ctx.textAlign = 'center';
-        var text = online.roomId ? ('房间 ' + online.roomId + ' · ' + online.status) : online.status;
-        ctx.fillText(text, DW / 2, DH * 0.64 + 276);
-        ctx.restore();
+        status = online.roomId ? ('房间 ' + online.roomId + ' · ' + online.status) : online.status;
       }
     }
+    if (bestWave > 0 || status) {
+      ctx.save();
+      R.font(ctx, 20, false);
+      ctx.fillStyle = 'rgba(232,218,183,0.8)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var footer = bestWave > 0 ? '最佳战绩：第 ' + bestWave + ' 波' : '';
+      if (status) footer += (footer ? '　·　' : '') + status;
+      ctx.fillText(compactText(ctx, footer, DW - 100), centerX, DH * 0.918);
+      ctx.restore();
+    }
+
+    // 兵器库入口保持原有兑换和点击逻辑。
+    var weaponUnlocked = ZY.Weapon && ZY.Weapon.isLibraryUnlocked && ZY.Weapon.isLibraryUnlocked();
+    UI.buttons.weaponLib = {
+      x: DW - 238, y: DH - 90, w: 202, h: 58,
+      label: weaponUnlocked ? '兵器库' : '兑换兵器', fs: 24
+    };
+    jadeButton(UI.buttons.weaponLib, true);
+
     if (ZY.Online && ZY.Online.state && ZY.Online.state().lobbyOpen) UI.drawOnlineLobby(ctx);
     drawToasts(ctx);
     // 头像选择弹窗（覆盖在最上层）
