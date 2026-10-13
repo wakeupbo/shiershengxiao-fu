@@ -42,7 +42,7 @@ vm.createContext(sandbox);
 function load(name) {
   vm.runInContext(fs.readFileSync(path.join(JS_DIR, name), 'utf8'), sandbox, { filename: name });
 }
-['config.js', 'rank.js', 'map.js', 'render.js', 'board.js', 'weapon.js', 'battle.js', 'ui.js'].forEach(load);
+['config.js', 'rank.js', 'map.js', 'chenlong-skill.js', 'render.js', 'board.js', 'weapon.js', 'battle.js', 'ui.js'].forEach(load);
 
 const ZY = sandbox.ZY;
 const C = ZY.C, R = ZY.R, Map = ZY.Map;
@@ -121,6 +121,11 @@ run('weapon-bullets', () => {
 // 生肖武将基础弹道（未装备神器）
 run('hero-base-bullets', () => {
   Object.keys(C.HERO_FX).forEach((hero) => R.heroBaseBullet(ctx, hero, 1.5));
+  R.dragonClawBullet(ctx, 1.5);
+  ZY.ChenLongSkill.drawDragon(ctx, 1.5, 0.55);
+  ZY.ChenLongSkill.drawIdle(ctx, 120, 120, 60, 1.5, 1);
+  ZY.ChenLongSkill.drawTrail(ctx, [{ x: 10, y: 10 }, { x: 25, y: 20 }], 45, 30, 60);
+  ZY.ChenLongSkill.drawImpact(ctx, { x: 40, y: 40 }, 0.5);
 });
 
 // battle.js 绘制：所有生肖专属特效 + 武将弹道 + 辰龙光环
@@ -145,7 +150,7 @@ run('battle.draw', () => {
   };
   // 各生肖技能特效
   ['ink', 'hit', 'text', 'slash', 'lance', 'roar', 'summon',
-    'ratwave', 'ratbite', 'oxcharge', 'tigerclaw', 'poison'].forEach((t) => {
+    'ratwave', 'ratbite', 'oxcharge', 'tigerclaw', 'dragonclaw', 'poison'].forEach((t) => {
     BT.fx(t, 120, 120, 0.4, 180);
   });
   BT.draw(ctx);

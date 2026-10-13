@@ -127,7 +127,7 @@
       G.bullets.push({
         x: p.x, y: p.y - L.cell * 0.2,
         target: target,
-        spd: (st.skill === 'snipe' ? 16 : 11) * L.cell,
+        spd: (st.skill === 'snipe' ? 16 : (u.name === '辰龙' ? 5 : 11)) * L.cell,
         dmg: exec ? target.hp + 1 : dmg,
         exec: exec,
         poison: st.skill === 'venom',
@@ -136,7 +136,8 @@
         hero: u.kind === 'g' ? u.name : null,
         shape: u.kind === 's' ? u.ch : (st.skill === 'snipe' ? '翼' : null),
         weaponShape: st.weaponShape || null,
-        weaponColor: st.weapon ? C.WEAPON_QUALITY[st.weapon.quality].color : null
+        weaponColor: st.weapon ? C.WEAPON_QUALITY[st.weapon.quality].color : null,
+        trail: []
       });
       if (st.skill === 'snipe') BT.fx('moonflash', p.x, p.y, Math.atan2(target.y - p.y, target.x - p.x));
       if (side === 'p') ZY.sfx('shoot');
@@ -162,10 +163,18 @@
         else if (bl.exec) {
           BT.fx('tigerclaw', bl.target.x, bl.target.y);
           BT.fx('text', bl.target.x, bl.target.y - 40, '斩!', '#8a2a1e');
-        } else BT.fx('hit', bl.target.x, bl.target.y);
+        } else if (bl.hero === '辰龙') {
+          BT.fx('dragonclaw', bl.target.x, bl.target.y, bl.ang);
+          BT.fx('text', bl.target.x, bl.target.y - 32, '-' + bl.dmg, '#f0c850');
+        }
+        else BT.fx('hit', bl.target.x, bl.target.y);
         G.bullets.splice(b, 1);
       } else {
         bl.ang = Math.atan2(dy, dx);
+        if (bl.hero === '辰龙' && bl.trail) {
+          bl.trail.push({ x: bl.x, y: bl.y });
+          if (bl.trail.length > 9) bl.trail.shift();
+        }
         bl.x += dx / d * step;
         bl.y += dy / d * step;
       }
@@ -181,7 +190,7 @@
     var dur = {
       ink: 0.45, hit: 0.22, text: 1.0, slash: 0.28, lance: 0.25, roar: 0.4, summon: 0.9,
       // 生肖专属特效
-      ratwave: 0.5, ratbite: 0.26, oxcharge: 0.55, tigerclaw: 0.42, poison: 0.75, moonflash: 0.35
+      ratwave: 0.5, ratbite: 0.26, oxcharge: 0.55, tigerclaw: 0.42, dragonclaw: 0.48, poison: 0.75, moonflash: 0.35
     }[type] || 0.5;
     ZY.G.effects.push({ type: type, x: x, y: y, a: a, b: b, t: 0, dur: dur });
   };
@@ -193,11 +202,17 @@
     for (var i = 0; i < G.bullets.length; i++) {
       var bl = G.bullets[i];
       ctx.save();
+      if (bl.hero === '辰龙' && ZY.ChenLongSkill && ZY.ChenLongSkill.drawTrail) {
+        ZY.ChenLongSkill.drawTrail(ctx, bl.trail, bl.x, bl.y, ZY.L.cell);
+      }
       ctx.translate(bl.x, bl.y);
       ctx.rotate(bl.ang || 0);
       // 武将：生肖专属弹道（装备神器时叠加该神器的生肖造型）
       if (bl.hero) {
-        if (bl.weaponShape && R.drawWeaponBullet) R.drawWeaponBullet(ctx, bl.weaponShape, bl.weaponColor, true, bl.hero);
+        if (bl.hero === '辰龙' && ZY.ChenLongSkill && ZY.ChenLongSkill.drawFlight) {
+          ZY.ChenLongSkill.drawFlight(ctx, G.time, ZY.L.cell);
+        }
+        else if (bl.weaponShape && R.drawWeaponBullet) R.drawWeaponBullet(ctx, bl.weaponShape, bl.weaponColor, true, bl.hero);
         else if (R.heroBaseBullet) R.heroBaseBullet(ctx, bl.hero, G.time);
       } else if (bl.weaponShape && R.drawWeaponBullet) {
         // 士兵装备武器：用武器专属弹道造型
@@ -304,6 +319,10 @@
         ctx.beginPath();
         ctx.arc(fx.x, fx.y, 8 + 18 * k, 0, Math.PI * 2);
         ctx.stroke();
+      } else if (fx.type === 'dragonclaw') {
+        if (ZY.ChenLongSkill && ZY.ChenLongSkill.drawImpact) {
+          ZY.ChenLongSkill.drawImpact(ctx, fx, k);
+        }
       } else if (fx.type === 'text') {
         ctx.globalAlpha = 1 - k * k;
         ctx.fillStyle = fx.b || '#2b241a';

@@ -629,7 +629,7 @@
   // attackT: 攻击动画剩余时间（秒），从 0.35 衰减到 0
   // ch: 兵种字（刀/枪/弓/骑）或武将名
   // kind: 's' 兵种 | 'g' 武将
-  R.morphTile = function (ctx, x, y, s, ch, kind, attackT) {
+  R.morphTile = function (ctx, x, y, s, ch, kind, attackT, hero) {
     if (!attackT || attackT <= 0) return false; // 无变形，调用方走默认渲染
     ctx.save();
     // 进度 0~1：0=刚触发，1=恢复
@@ -730,18 +730,31 @@
       ctx.fillStyle = '#ffd700';
       ctx.strokeStyle = '#b8860b';
       ctx.lineWidth = 2;
-      // 四芒星
-      ctx.beginPath();
-      for (var i = 0; i < 8; i++) {
-        var a = i / 8 * Math.PI * 2;
-        var r = i % 2 === 0 ? s * 0.4 : s * 0.18;
-        var px = Math.cos(a) * r;
-        var py = Math.sin(a) * r;
-        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      if (hero === '辰龙') {
+        // 辰龙出击时显现三道鎏金龙爪痕
+        ctx.strokeStyle = '#f0c850';
+        ctx.lineWidth = Math.max(2, s * 0.075);
+        ctx.lineCap = 'round';
+        for (var gc = -1; gc <= 1; gc++) {
+          ctx.beginPath();
+          ctx.moveTo(-s * 0.32 + gc * s * 0.08, -s * 0.32 + gc * s * 0.08);
+          ctx.quadraticCurveTo(gc * s * 0.05, gc * s * 0.04, s * 0.32 + gc * s * 0.08, s * 0.32 + gc * s * 0.08);
+          ctx.stroke();
+        }
+      } else {
+        // 四芒星
+        ctx.beginPath();
+        for (var i = 0; i < 8; i++) {
+          var a = i / 8 * Math.PI * 2;
+          var r = i % 2 === 0 ? s * 0.4 : s * 0.18;
+          var px = Math.cos(a) * r;
+          var py = Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
       }
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
     }
 
     ctx.shadowBlur = 0;
@@ -1490,6 +1503,129 @@
     ctx.restore();
   };
 
+  // 辰龙飞行弹道：鎏金盘龙、鬃角与伸出的龙爪，局部坐标朝向 +x
+  R.dragonClawBullet = function (ctx, t, scale) {
+    var sway = Math.sin((t || 0) * 9) * 1.5;
+    ctx.save();
+    ctx.scale(scale || 1.25, scale || 1.25);
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = '#fce58a';
+    ctx.lineWidth = 15;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-39, 3);
+    ctx.quadraticCurveTo(-21, -15 + sway, -5, 3);
+    ctx.quadraticCurveTo(10, 17 - sway, 25, -3);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // 一条蜿蜒龙身，以深金描边和亮金鳞甲表现参考图中的鎏金质感
+    ctx.strokeStyle = '#9c6810';
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(-39, 3);
+    ctx.quadraticCurveTo(-22, -16 + sway, -5, 3);
+    ctx.quadraticCurveTo(10, 17 - sway, 25, -3);
+    ctx.stroke();
+    ctx.strokeStyle = '#efbd3e';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(-39, 3);
+    ctx.quadraticCurveTo(-22, -16 + sway, -5, 3);
+    ctx.quadraticCurveTo(10, 17 - sway, 25, -3);
+    ctx.stroke();
+    ctx.strokeStyle = '#fff0a0';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(-34, 1);
+    ctx.quadraticCurveTo(-21, -11 + sway, -7, 3);
+    ctx.quadraticCurveTo(9, 14 - sway, 22, -3);
+    ctx.stroke();
+
+    // 尾焰与脊鬃
+    ctx.fillStyle = '#f7d66c';
+    ctx.beginPath();
+    ctx.moveTo(-37, 2);
+    ctx.quadraticCurveTo(-48, -9, -43, -17);
+    ctx.quadraticCurveTo(-35, -11, -34, -4);
+    ctx.quadraticCurveTo(-28, -12, -25, -11);
+    ctx.quadraticCurveTo(-27, -2, -34, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#3a8ad0';
+    for (var sp = 0; sp < 6; sp++) {
+      var sx = -22 + sp * 7;
+      var sy = sp < 3 ? -8 + sp * 3 : 3 - (sp - 3) * 3;
+      ctx.beginPath();
+      ctx.moveTo(sx - 2, sy + 1);
+      ctx.lineTo(sx + 1, sy - 6);
+      ctx.lineTo(sx + 4, sy + 1);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Dragon head with swept horns, mane and a bright eye
+    ctx.fillStyle = '#d99b22';
+    ctx.strokeStyle = '#8a5b13';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(17, -8);
+    ctx.quadraticCurveTo(24, -15, 31, -10);
+    ctx.lineTo(39, -5);
+    ctx.quadraticCurveTo(35, 0, 27, 1);
+    ctx.quadraticCurveTo(20, 2, 16, -3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff0a0';
+    ctx.beginPath();
+    ctx.moveTo(21, -9);
+    ctx.quadraticCurveTo(16, -19, 11, -17);
+    ctx.quadraticCurveTo(15, -11, 18, -6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(27, -10);
+    ctx.quadraticCurveTo(26, -19, 31, -20);
+    ctx.quadraticCurveTo(30, -13, 31, -8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#3a8ad0';
+    ctx.beginPath();
+    ctx.arc(29, -7, 1.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fce58a';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(31, -1);
+    ctx.quadraticCurveTo(38, 1, 41, -2);
+    ctx.moveTo(29, 0);
+    ctx.quadraticCurveTo(34, 5, 39, 5);
+    ctx.stroke();
+
+    // Forward dragon paw with three curved claws
+    ctx.strokeStyle = '#9c6810';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(17, -1);
+    ctx.quadraticCurveTo(19, 7, 25, 10);
+    ctx.stroke();
+    ctx.fillStyle = '#f3ca58';
+    ctx.beginPath();
+    ctx.ellipse(26, 10, 5, 3.2, 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff1b0';
+    ctx.lineWidth = 1.8;
+    for (var claw = -1; claw <= 1; claw++) {
+      ctx.beginPath();
+      ctx.moveTo(28, 10 + claw * 1.6);
+      ctx.quadraticCurveTo(33, 12 + claw * 2, 35, 16 + claw * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
   // 生肖武将基础弹道（未装备专属神器时的默认攻击特效，按生肖属性定制）
   // hero：武将名；已 translate+rotate 到弹头位置，朝向 +x 方向
   R.heroBaseBullet = function (ctx, hero, t) {
@@ -1540,17 +1676,7 @@
       ctx.moveTo(-12, 0); ctx.lineTo(-16, 3);
       ctx.stroke();
     } else if (kind === 'dragon') {
-      // 辰龙：夜明珠 + 龙须龙气
-      ctx.shadowColor = c; ctx.shadowBlur = 8;
-      ctx.fillStyle = '#fce58a';
-      ctx.beginPath(); ctx.arc(3, 0, 5.5, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = a; ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-15, -2); ctx.quadraticCurveTo(-7, -6, -2, 0);
-      ctx.quadraticCurveTo(-7, 6, -15, 2); ctx.stroke();
-      ctx.fillStyle = '#fff3c0';
-      ctx.beginPath(); ctx.arc(2, -1.5, 2, 0, Math.PI * 2); ctx.fill();
+      R.dragonClawBullet(ctx, t);
     } else {
       // 巳蛇：蜿蜒灵蛇 + 吐信 + 毒滴
       ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.lineCap = 'round';

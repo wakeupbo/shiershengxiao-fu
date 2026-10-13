@@ -203,6 +203,10 @@
         var p = ZY.Map.cellCenter(c, r);
         var isDragSrc = d && d.moved && side === 'p' && d.from.type === 'cell' && d.from.key === k;
         ZY.Board.drawUnit(ctx, u, p.x, p.y, L.cell - 12, isDragSrc ? 0.3 : 1);
+        if (u.kind === 'g' && u.name === '辰龙' && (u.half == null || u.half === 0) &&
+            ZY.ChenLongSkill && ZY.ChenLongSkill.drawIdle) {
+          ZY.ChenLongSkill.drawIdle(ctx, p.x, p.y, L.cell - 12, G.time, isDragSrc ? 0.3 : 1);
+        }
       });
     });
   }

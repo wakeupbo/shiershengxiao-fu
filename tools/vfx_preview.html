@@ -27,6 +27,7 @@
   </script>
   <script src="../js/config.js"></script>
   <script src="../js/map.js"></script>
+  <script src="../js/chenlong-skill.js"></script>
   <script src="../js/render.js"></script>
   <script src="../js/board.js"></script>
   <script src="../js/battle.js"></script>
@@ -51,6 +52,7 @@
         ctx.save();
         ctx.translate(x, y);
         if (shape) R.drawWeaponBullet(ctx, shape, C.WEAPON_QUALITY.orange.color, true, hero);
+        else if (hero === '辰龙') ZY.ChenLongSkill.drawFlight(ctx, 1, 110);
         else R.heroBaseBullet(ctx, hero, 1);
         ctx.restore();
       }

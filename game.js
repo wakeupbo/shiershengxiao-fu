@@ -2,6 +2,7 @@
 require('./js/adapter.js');
 require('./js/config.js');
 require('./js/map.js');
+require('./js/chenlong-skill.js');
 require('./js/render.js');
 require('./js/audio.js');
 require('./js/board.js');

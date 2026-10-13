@@ -81,6 +81,7 @@ function loadFile(name) {
 loadFile('config.js');
 loadFile('rank.js');
 loadFile('map.js');
+loadFile('chenlong-skill.js');
 loadFile('render.js');
 loadFile('board.js');
 loadFile('enemies.js');
