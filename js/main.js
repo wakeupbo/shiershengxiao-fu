@@ -199,15 +199,37 @@
     var d = ZY.Board.dragging();
     ['p', 'e'].forEach(function (side) {
       var S = side === 'p' ? G.p : G.e;
+      var dragons = [];
       ZY.Board.eachUnit(S, function (u, c, r, k) {
         var p = ZY.Map.cellCenter(c, r);
         var isDragSrc = d && d.moved && side === 'p' && d.from.type === 'cell' && d.from.key === k;
         ZY.Board.drawUnit(ctx, u, p.x, p.y, L.cell - 12, isDragSrc ? 0.3 : 1);
         if (u.kind === 'g' && u.name === '辰龙' && (u.half == null || u.half === 0) &&
             ZY.ChenLongSkill && ZY.ChenLongSkill.drawIdle) {
-          ZY.ChenLongSkill.drawIdle(ctx, p.x, p.y, L.cell - 12, G.time, isDragSrc ? 0.3 : 1);
+          var dragonX = p.x, dragonY = p.y;
+          var partner = u.pairedKey && S.units[u.pairedKey];
+          if (partner && partner.kind === 'g' && partner.name === '辰龙') {
+            var pairCell = u.pairedKey.split('_');
+            var pairCenter = ZY.Map.cellCenter(+pairCell[0], +pairCell[1]);
+            dragonX = (p.x + pairCenter.x) / 2;
+            dragonY = (p.y + pairCenter.y) / 2;
+          }
+          dragons.push({
+            x: dragonX,
+            y: dragonY,
+            alpha: isDragSrc ? 0.3 : 1,
+            attackT: u.attackT,
+            attackAngle: u.attackAngle
+          });
         }
       });
+      for (var i = 0; i < dragons.length; i++) {
+        var dragon = dragons[i];
+        ZY.ChenLongSkill.drawIdle(
+          ctx, dragon.x, dragon.y, L.cell - 12, G.time, dragon.alpha,
+          dragon.attackT, dragon.attackAngle
+        );
+      }
     });
   }
 

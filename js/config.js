@@ -42,7 +42,7 @@
     { name: '丑牛', f1: '丑', f2: '牛', skill: 'stun',    desc: '蛮牛冲撞·范围眩晕' },
     { name: '寅虎', f1: '寅', f2: '虎', skill: 'execute', desc: '猛虎扑杀·处决残敌' },
     { name: '卯兔', f1: '卯', f2: '兔', skill: 'snipe',   desc: '月兔疾跃·速射' },
-    { name: '辰龙', f1: '辰', f2: '龙', skill: 'aura',    desc: '龙腾祥瑞·友军攻击+20%' },
+    { name: '辰龙', f1: '辰', f2: '龙', skill: 'aura',    desc: '龙腾祥瑞·友军攻击+20%，神龙喷火球' },
     { name: '巳蛇', f1: '巳', f2: '蛇', skill: 'venom',   desc: '毒蛇缠绕·减速侵蚀' }
   ];
   C.HEROES_PER_GAME = 4;

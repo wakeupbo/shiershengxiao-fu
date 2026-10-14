@@ -646,7 +646,7 @@
       ctx.globalAlpha = alpha != null ? alpha : 1;
       // 半身武将用自己的字变形；整将用全名
       var morphCh = (u.kind === 'g' && u.half != null) ? u.ch : (u.kind === 'g' ? u.name : ch);
-      var morphed = R.morphTile(ctx, x, y, size, morphCh, u.kind, u.attackT, u.name);
+      var morphed = R.morphTile(ctx, x, y, size, morphCh, u.kind, u.attackT, u.name, u.attackAngle);
       ctx.restore();
       if (morphed) return;
     }

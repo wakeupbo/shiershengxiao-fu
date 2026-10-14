@@ -1,4 +1,4 @@
-// 辰龙专属 Canvas 技能：待机神龙、飞行拖尾与命中爆发。
+// 辰龙专属 Canvas 技能：盘旋待机、龙口火球与命中爆发。
 (function () {
   var root = (typeof GameGlobal !== 'undefined') ? GameGlobal
     : (typeof globalThis !== 'undefined') ? globalThis
@@ -185,39 +185,152 @@
     ctx.restore();
   };
 
-  Skill.drawIdle = function (ctx, x, y, cardSize, time, alpha) {
-    var bob = Math.sin((time || 0) * 2.4) * cardSize * 0.035;
+  var DRAGON_MOUTH_ANGLE = 1.72;
+
+  Skill.dragonCenter = function (x, y, cardSize, time) {
+    return {
+      x: x,
+      y: y - cardSize * 0.78 + Math.sin((time || 0) * 2.4) * cardSize * 0.035
+    };
+  };
+
+  Skill.mouthPosition = function (x, y, cardSize, angle, time) {
+    var center = Skill.dragonCenter(x, y, cardSize, time);
+    var mouthOffset = cardSize * 0.3;
+    return {
+      x: center.x + Math.cos(angle) * mouthOffset,
+      y: center.y + Math.sin(angle) * mouthOffset
+    };
+  };
+
+  Skill.drawIdle = function (ctx, x, y, cardSize, time, alpha, attackT, attackAngle) {
+    var now = time || 0;
+    var attack = Math.max(0, Math.min(1, 1 - (attackT || 0) / 0.35));
+    var center = Skill.dragonCenter(x, y, cardSize, now);
+    var idleAngle = now * 0.2 + Math.sin(now * 1.7) * 0.12;
+    var angle = attackT > 0 && attackAngle != null
+      ? attackAngle - DRAGON_MOUTH_ANGLE
+      : idleAngle;
+    var lunge = attackT > 0 ? Math.sin(attack * Math.PI) * cardSize * 0.12 : 0;
+    var imageWidth = cardSize * (1.65 + attack * 0.08);
+    var imageHeight = imageWidth * 1376 / 1760;
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
-    ctx.translate(x, y - cardSize * 0.91 + bob);
+    ctx.translate(
+      center.x + Math.cos(angle + DRAGON_MOUTH_ANGLE) * lunge,
+      center.y + Math.sin(angle + DRAGON_MOUTH_ANGLE) * lunge
+    );
+    ctx.rotate(angle);
     ctx.globalCompositeOperation = 'lighter';
-    var glow = ctx.createRadialGradient(0, 0, 1, 0, 0, cardSize * 0.43);
+    var glow = ctx.createRadialGradient(0, 0, 1, 0, 0, cardSize * 0.84);
     glow.addColorStop(0, 'rgba(255,222,114,0.34)');
     glow.addColorStop(1, 'rgba(255,180,30,0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(0, 0, cardSize * 0.43, 0, Math.PI * 2);
+    ctx.arc(0, 0, cardSize * 0.84, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.globalAlpha *= 0.4 + Math.sin(now * 3.2) * 0.08;
+    ctx.strokeStyle = '#ffe08a';
+    ctx.lineWidth = Math.max(1, cardSize * 0.025);
+    ctx.setLineDash([cardSize * 0.12, cardSize * 0.09]);
+    ctx.lineDashOffset = -now * cardSize * 0.34;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, cardSize * 0.78, cardSize * 0.47, now * 0.28, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
     ctx.globalCompositeOperation = 'source-over';
-    // 待机龙保持原有的迷你代码绘制造型；透明设计图只用于攻击弹道。
-    Skill.drawDragon(ctx, time, cardSize / 112);
+
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.shadowColor = '#ffd75d';
+    ctx.shadowBlur = 9 + Math.sin(now * 4) * 3;
+    if (attackDragonImageReady()) {
+      // 素材右下角有生成水印，裁去空白角落而不裁伤龙身与龙尾。
+      ctx.beginPath();
+      ctx.moveTo(-imageWidth / 2, -imageHeight / 2);
+      ctx.lineTo(imageWidth / 2, -imageHeight / 2);
+      ctx.lineTo(imageWidth / 2, imageHeight * 0.38);
+      ctx.lineTo(imageWidth * 0.36, imageHeight * 0.38);
+      ctx.lineTo(imageWidth * 0.36, imageHeight / 2);
+      ctx.lineTo(-imageWidth / 2, imageHeight / 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(attackDragonImage, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
+    } else {
+      Skill.drawDragon(ctx, now, cardSize / 112);
+    }
+    ctx.restore();
+
+    for (var spark = 0; spark < 3; spark++) {
+      var orbit = now * 1.8 + spark * Math.PI * 2 / 3;
+      ctx.globalAlpha = (alpha == null ? 1 : alpha) * (0.55 + Math.sin(now * 5 + spark) * 0.2);
+      ctx.fillStyle = spark === 1 ? '#fff4b0' : '#ffc83d';
+      ctx.beginPath();
+      ctx.arc(
+        Math.cos(orbit) * cardSize * 0.75,
+        Math.sin(orbit) * cardSize * 0.44,
+        Math.max(1.5, cardSize * 0.035),
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+
+    if (attackT > 0 && attack > 0.08 && attack < 0.9) {
+      ctx.save();
+      ctx.translate(
+        Math.cos(DRAGON_MOUTH_ANGLE) * cardSize * 0.3,
+        Math.sin(DRAGON_MOUTH_ANGLE) * cardSize * 0.3
+      );
+      ctx.rotate(DRAGON_MOUTH_ANGLE);
+      Skill.drawBreath(ctx, imageWidth * 0.08, now, imageWidth * 0.24, Math.sin(attack * Math.PI));
+      ctx.restore();
+    }
     ctx.restore();
   };
 
-  Skill.drawFlight = function (ctx, time, width) {
-    if (attackDragonImageReady()) {
-      var imageWidth = width;
-      var imageHeight = imageWidth * attackDragonImage.height / attackDragonImage.width;
-      ctx.save();
-      // 原画龙首朝左下，旋转到弹道方向，让龙爪朝向目标。
-      ctx.rotate(-2.0);
-      ctx.shadowColor = '#ffd75d';
-      ctx.shadowBlur = 12;
-      ctx.drawImage(attackDragonImage, -imageWidth / 2, -imageHeight / 2, imageWidth, imageHeight);
-      ctx.restore();
-      return;
-    }
-    Skill.drawDragon(ctx, time, width / 112);
+  Skill.drawBreath = function (ctx, size, time, length, alpha) {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.min(1, alpha) * (0.72 + Math.sin(time * 38) * 0.18);
+    var flame = ctx.createLinearGradient(0, 0, length, 0);
+    flame.addColorStop(0, 'rgba(255,255,220,0.98)');
+    flame.addColorStop(0.28, 'rgba(255,228,91,0.95)');
+    flame.addColorStop(0.72, 'rgba(255,105,24,0.72)');
+    flame.addColorStop(1, 'rgba(255,55,14,0)');
+    ctx.fillStyle = flame;
+    ctx.beginPath();
+    ctx.moveTo(0, -size * 0.11);
+    ctx.quadraticCurveTo(length * 0.4, -size * 0.25, length, 0);
+    ctx.quadraticCurveTo(length * 0.45, size * 0.2, 0, size * 0.11);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  };
+
+  Skill.drawFireball = function (ctx, time, size) {
+    var pulse = 0.92 + Math.sin((time || 0) * 24) * 0.08;
+    var radius = (size || 24) * pulse;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowColor = '#ff5a16';
+    ctx.shadowBlur = radius * 0.9;
+    var flame = ctx.createRadialGradient(-radius * 0.2, 0, radius * 0.08, 0, 0, radius);
+    flame.addColorStop(0, '#fffde0');
+    flame.addColorStop(0.26, '#ffe66b');
+    flame.addColorStop(0.62, '#ff8b1c');
+    flame.addColorStop(1, 'rgba(230,45,8,0.12)');
+    ctx.fillStyle = flame;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,238,139,0.95)';
+    ctx.beginPath();
+    ctx.ellipse(radius * 0.12, -radius * 0.05, radius * 0.46, radius * 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   };
 
   Skill.drawTrail = function (ctx, points, x, y, cellSize) {
@@ -225,9 +338,9 @@
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     var gradient = ctx.createLinearGradient(points[0].x, points[0].y, x, y);
-    gradient.addColorStop(0, 'rgba(255,185,35,0)');
-    gradient.addColorStop(0.65, 'rgba(255,190,45,0.32)');
-    gradient.addColorStop(1, 'rgba(255,245,180,0.9)');
+    gradient.addColorStop(0, 'rgba(230,45,8,0)');
+    gradient.addColorStop(0.65, 'rgba(255,95,20,0.34)');
+    gradient.addColorStop(1, 'rgba(255,225,112,0.95)');
     ctx.strokeStyle = gradient;
     ctx.lineWidth = Math.max(3, cellSize * 0.14);
     ctx.lineCap = 'round';
@@ -258,9 +371,10 @@
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = fade;
     var flash = ctx.createRadialGradient(effect.x, effect.y, 1, effect.x, effect.y, radius);
-    flash.addColorStop(0, 'rgba(255,255,225,0.95)');
-    flash.addColorStop(0.22, 'rgba(255,224,111,0.82)');
-    flash.addColorStop(1, 'rgba(255,174,25,0)');
+    flash.addColorStop(0, 'rgba(255,255,225,0.98)');
+    flash.addColorStop(0.22, 'rgba(255,202,65,0.9)');
+    flash.addColorStop(0.62, 'rgba(255,83,18,0.55)');
+    flash.addColorStop(1, 'rgba(255,70,15,0)');
     ctx.fillStyle = flash;
     ctx.beginPath();
     ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
@@ -268,7 +382,7 @@
 
     for (var ring = 0; ring < 3; ring++) {
       ctx.globalAlpha = fade * (0.9 - ring * 0.2);
-      ctx.strokeStyle = ring === 0 ? '#fff4b2' : '#f3b72f';
+      ctx.strokeStyle = ring === 0 ? '#fff4b2' : (ring === 1 ? '#ffad32' : '#e84b18');
       ctx.lineWidth = Math.max(1, 3 - ring * 0.6);
       ctx.beginPath();
       ctx.arc(effect.x, effect.y, 6 + k * (22 + ring * 11), 0, Math.PI * 2);
@@ -281,7 +395,7 @@
       var distance = speed * k;
       var size = (1.4 + random() * 2.8) * fade;
       ctx.globalAlpha = fade * (0.55 + random() * 0.45);
-      ctx.fillStyle = p % 3 === 0 ? '#fff8cd' : (p % 3 === 1 ? '#ffd34e' : '#ef9f1b');
+      ctx.fillStyle = p % 3 === 0 ? '#fff8cd' : (p % 3 === 1 ? '#ffd34e' : '#f05a1b');
       ctx.beginPath();
       ctx.arc(
         effect.x + Math.cos(angle) * distance,

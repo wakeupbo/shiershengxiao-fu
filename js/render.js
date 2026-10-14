@@ -629,7 +629,7 @@
   // attackT: 攻击动画剩余时间（秒），从 0.35 衰减到 0
   // ch: 兵种字（刀/枪/弓/骑）或武将名
   // kind: 's' 兵种 | 'g' 武将
-  R.morphTile = function (ctx, x, y, s, ch, kind, attackT, hero) {
+  R.morphTile = function (ctx, x, y, s, ch, kind, attackT, hero, attackAngle) {
     if (!attackT || attackT <= 0) return false; // 无变形，调用方走默认渲染
     ctx.save();
     // 进度 0~1：0=刚触发，1=恢复
@@ -652,7 +652,7 @@
     var flash = morph * 0.4;
 
     ctx.translate(x, y);
-    ctx.rotate(rot);
+    ctx.rotate(rot + (kind === 'g' && hero === '辰龙' && attackAngle != null ? attackAngle : 0));
     ctx.scale(scaleX, scaleY);
     ctx.globalAlpha = 1;
 
@@ -731,14 +731,21 @@
       ctx.strokeStyle = '#b8860b';
       ctx.lineWidth = 2;
       if (hero === '辰龙') {
-        // 辰龙出击时显现三道鎏金龙爪痕
-        ctx.strokeStyle = '#f0c850';
-        ctx.lineWidth = Math.max(2, s * 0.075);
+        // 辰龙朝目标喷吐火焰，攻击方向与盘旋龙首一致。
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowColor = '#ff6a1a';
+        ctx.shadowBlur = 8 * morph;
+        ctx.fillStyle = '#fff2a0';
         ctx.lineCap = 'round';
-        for (var gc = -1; gc <= 1; gc++) {
+        ctx.beginPath();
+        ctx.arc(s * 0.08, 0, s * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffb432';
+        ctx.lineWidth = Math.max(2, s * 0.1);
+        for (var flame = -1; flame <= 1; flame++) {
           ctx.beginPath();
-          ctx.moveTo(-s * 0.32 + gc * s * 0.08, -s * 0.32 + gc * s * 0.08);
-          ctx.quadraticCurveTo(gc * s * 0.05, gc * s * 0.04, s * 0.32 + gc * s * 0.08, s * 0.32 + gc * s * 0.08);
+          ctx.moveTo(-s * 0.02, flame * s * 0.08);
+          ctx.quadraticCurveTo(s * 0.12, flame * s * 0.11, s * 0.38, flame * s * 0.19);
           ctx.stroke();
         }
       } else {

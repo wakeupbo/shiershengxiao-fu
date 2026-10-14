@@ -548,7 +548,7 @@
   function cloneUnit(unit, side) {
     if (!unit || typeof unit !== 'object') return null;
     var out = {};
-    ['kind', 'ch', 'name', 'half', 'pairedKey', 'lv', 'cd', 'attackT'].forEach(function (key) {
+    ['kind', 'ch', 'name', 'half', 'pairedKey', 'lv', 'cd', 'attackT', 'attackAngle'].forEach(function (key) {
       if (unit[key] !== undefined) out[key] = unit[key];
     });
     if (out.kind === 'g') out.side = side;

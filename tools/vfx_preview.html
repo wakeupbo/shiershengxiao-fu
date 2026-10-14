@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-  <!-- 开发预览：静态展示 6 位生肖武将的基础弹道 / 专属神器弹道 / 技能特效 -->
+  <!-- 开发预览：展示 6 位生肖武将的基础攻击 / 专属神器弹道 / 技能特效 -->
   <canvas id="vcv" width="900" height="850"></canvas>
   <script>
     // 预先注入最小化的 ZY 环境（不启动主循环）
@@ -35,6 +35,8 @@
     (function () {
       var ctx = document.getElementById('vcv').getContext('2d');
       var C = ZY.C, R = ZY.R, BT = ZY.Battle, B = ZY.Board;
+      function draw(time) {
+      ctx.clearRect(0, 0, 900, 850);
 
       // 布局占位（地图坐标换算用）
       ZY.L = { cell: 46, mapX: 0, mapY: 0, mapW: 0, mapH: 0, benchX: 0, benchY: 0, benchSlot: 0, benchGap: 0, btnY: 0, topBar: 0 };
@@ -45,14 +47,14 @@
       var SKILL_FX = { '子鼠': 'ratwave', '丑牛': 'oxcharge', '寅虎': 'tigerclaw', '卯兔': 'moonflash', '辰龙': null, '巳蛇': 'poison' };
       var SKILL_TXT = {
         '子鼠': '鼠群突袭·贯穿直线', '丑牛': '蛮牛冲撞·范围眩晕', '寅虎': '猛虎扑杀·处决残敌',
-        '卯兔': '月兔疾跃·速射', '辰龙': '龙腾祥瑞·范围光环', '巳蛇': '毒蛇缠绕·减速中毒'
+        '卯兔': '月兔疾跃·速射', '辰龙': '友军攻击+20%·盘旋喷火球', '巳蛇': '毒蛇缠绕·减速中毒'
       };
 
       function drawBullet(hero, shape, x, y) {
         ctx.save();
         ctx.translate(x, y);
         if (shape) R.drawWeaponBullet(ctx, shape, C.WEAPON_QUALITY.orange.color, true, hero);
-        else if (hero === '辰龙') ZY.ChenLongSkill.drawFlight(ctx, 1, 110);
+        else if (hero === '辰龙') ZY.ChenLongSkill.drawFireball(ctx, 1, 15);
         else R.heroBaseBullet(ctx, hero, 1);
         ctx.restore();
       }
@@ -112,18 +114,30 @@
           ZY.G.effects[0].t = ZY.G.effects[0].dur * 0.6;
           BT.draw(ctx);
         } else {
-          // 辰龙：放置半身触发盘龙光环绘制
+          // 辰龙：展示盘旋姿态、吐息火焰、火球和友军攻击光环。
           ZY.L.cell = 32;
           var cc = Math.round((exX - 16) / 32);
           var rr = Math.round((exY - 16) / 32);
           var key = cc + '_' + rr;
           ZY.L.mapX = 0; ZY.L.mapY = 0;
           ZY.G.p.units[key] = B.makeGeneralHalf('辰龙', '辰', 0, cc + 1 + '_' + rr, 1, 'p');
-          ZY.G.time = 1.2;
+          ZY.G.time = time;
+          ZY.ChenLongSkill.drawIdle(ctx, exX - 18, exY + 36, 34, time, 1, 0.16, 0);
+          ctx.save();
+          ctx.translate(exX + 36, exY + 16);
+          ZY.ChenLongSkill.drawFireball(ctx, time, 13);
+          ctx.restore();
           BT.draw(ctx);
         }
         ctx.restore();
       });
+      }
+
+      function animate(timestamp) {
+        draw(timestamp / 1000);
+        window.requestAnimationFrame(animate);
+      }
+      window.requestAnimationFrame(animate);
     })();
   </script>
 </body>

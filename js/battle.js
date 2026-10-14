@@ -53,10 +53,12 @@
   }
 
   // 同步攻击动画到武将另一半（两字都显示攻击特效，但伤害只在 half=0 结算）
-  function syncAttackT(S, u, t) {
+  function syncAttackT(S, u, t, angle) {
     u.attackT = t;
+    if (angle != null) u.attackAngle = angle;
     if (u.kind === 'g' && u.pairedKey && S.units[u.pairedKey]) {
       S.units[u.pairedKey].attackT = t;
+      if (angle != null) S.units[u.pairedKey].attackAngle = angle;
     }
   }
 
@@ -122,15 +124,35 @@
       var target = mostAdvanced(list, p.x, p.y, range);
       if (!target) { u.cd = 0.08; return; }
       u.cd = st.itv;
-      syncAttackT(S, u, 0.35); // 触发文字变形（两字同步）
+      var projectileX = p.x, projectileY = p.y - L.cell * 0.2;
+      var ang = Math.atan2(target.y - p.y, target.x - p.x);
+      if (u.kind === 'g' && u.name === '辰龙' && ZY.ChenLongSkill) {
+        var dragonX = p.x, dragonY = p.y;
+        var partner = u.pairedKey && S.units[u.pairedKey];
+        if (partner && partner.kind === 'g' && partner.name === '辰龙') {
+          var partnerCell = u.pairedKey.split('_');
+          var partnerCenter = ZY.Map.cellCenter(+partnerCell[0], +partnerCell[1]);
+          dragonX = (p.x + partnerCenter.x) / 2;
+          dragonY = (p.y + partnerCenter.y) / 2;
+        }
+        var dragonSize = L.cell - 12;
+        var dragonCenter = ZY.ChenLongSkill.dragonCenter(dragonX, dragonY, dragonSize, G.time);
+        ang = Math.atan2(target.y - dragonCenter.y, target.x - dragonCenter.x);
+        var mouth = ZY.ChenLongSkill.mouthPosition(dragonX, dragonY, dragonSize, ang, G.time);
+        projectileX = mouth.x;
+        projectileY = mouth.y;
+      }
+      syncAttackT(S, u, 0.35, u.kind === 'g' && u.name === '辰龙' ? ang : null);
       var exec = st.skill === 'execute' && !target.boss && target.hp / target.maxHp < 0.35;
       G.bullets.push({
-        x: p.x, y: p.y - L.cell * 0.2,
+        x: projectileX, y: projectileY,
         target: target,
-        spd: (st.skill === 'snipe' ? 16 : (u.name === '辰龙' ? 5 : 11)) * L.cell,
+        spd: (st.skill === 'snipe' ? 16 : (u.name === '辰龙' ? 8 : 11)) * L.cell,
         dmg: exec ? target.hp + 1 : dmg,
         exec: exec,
         poison: st.skill === 'venom',
+        fireball: u.kind === 'g' && u.name === '辰龙',
+        ang: ang,
         arrow: u.kind === 's' && u.ch === '翼' || st.skill === 'snipe',
         gold: u.kind === 'g',
         hero: u.kind === 'g' ? u.name : null,
@@ -163,15 +185,15 @@
         else if (bl.exec) {
           BT.fx('tigerclaw', bl.target.x, bl.target.y);
           BT.fx('text', bl.target.x, bl.target.y - 40, '斩!', '#8a2a1e');
-        } else if (bl.hero === '辰龙') {
-          BT.fx('dragonclaw', bl.target.x, bl.target.y, bl.ang);
+        } else if (bl.fireball || bl.hero === '辰龙') {
+          BT.fx('fireburst', bl.target.x, bl.target.y, bl.ang);
           BT.fx('text', bl.target.x, bl.target.y - 32, '-' + bl.dmg, '#f0c850');
         }
         else BT.fx('hit', bl.target.x, bl.target.y);
         G.bullets.splice(b, 1);
       } else {
         bl.ang = Math.atan2(dy, dx);
-        if (bl.hero === '辰龙' && bl.trail) {
+        if (bl.fireball && bl.trail) {
           bl.trail.push({ x: bl.x, y: bl.y });
           if (bl.trail.length > 9) bl.trail.shift();
         }
@@ -190,7 +212,7 @@
     var dur = {
       ink: 0.45, hit: 0.22, text: 1.0, slash: 0.28, lance: 0.25, roar: 0.4, summon: 0.9,
       // 生肖专属特效
-      ratwave: 0.5, ratbite: 0.26, oxcharge: 0.55, tigerclaw: 0.42, dragonclaw: 0.48, poison: 0.75, moonflash: 0.35
+      ratwave: 0.5, ratbite: 0.26, oxcharge: 0.55, tigerclaw: 0.42, dragonclaw: 0.48, fireburst: 0.55, poison: 0.75, moonflash: 0.35
     }[type] || 0.5;
     ZY.G.effects.push({ type: type, x: x, y: y, a: a, b: b, t: 0, dur: dur });
   };
@@ -202,15 +224,15 @@
     for (var i = 0; i < G.bullets.length; i++) {
       var bl = G.bullets[i];
       ctx.save();
-      if (bl.hero === '辰龙' && ZY.ChenLongSkill && ZY.ChenLongSkill.drawTrail) {
+      if (bl.fireball && ZY.ChenLongSkill && ZY.ChenLongSkill.drawTrail) {
         ZY.ChenLongSkill.drawTrail(ctx, bl.trail, bl.x, bl.y, ZY.L.cell);
       }
       ctx.translate(bl.x, bl.y);
       ctx.rotate(bl.ang || 0);
       // 武将：生肖专属弹道（装备神器时叠加该神器的生肖造型）
       if (bl.hero) {
-        if (bl.hero === '辰龙' && ZY.ChenLongSkill && ZY.ChenLongSkill.drawFlight) {
-          ZY.ChenLongSkill.drawFlight(ctx, G.time, ZY.L.cell);
+        if (bl.fireball && ZY.ChenLongSkill && ZY.ChenLongSkill.drawFireball) {
+          ZY.ChenLongSkill.drawFireball(ctx, G.time, ZY.L.cell * 0.22);
         }
         else if (bl.weaponShape && R.drawWeaponBullet) R.drawWeaponBullet(ctx, bl.weaponShape, bl.weaponColor, true, bl.hero);
         else if (R.heroBaseBullet) R.heroBaseBullet(ctx, bl.hero, G.time);
@@ -319,7 +341,7 @@
         ctx.beginPath();
         ctx.arc(fx.x, fx.y, 8 + 18 * k, 0, Math.PI * 2);
         ctx.stroke();
-      } else if (fx.type === 'dragonclaw') {
+      } else if (fx.type === 'dragonclaw' || fx.type === 'fireburst') {
         if (ZY.ChenLongSkill && ZY.ChenLongSkill.drawImpact) {
           ZY.ChenLongSkill.drawImpact(ctx, fx, k);
         }

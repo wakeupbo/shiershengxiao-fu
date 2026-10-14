@@ -124,6 +124,10 @@ run('hero-base-bullets', () => {
   R.dragonClawBullet(ctx, 1.5);
   ZY.ChenLongSkill.drawDragon(ctx, 1.5, 0.55);
   ZY.ChenLongSkill.drawIdle(ctx, 120, 120, 60, 1.5, 1);
+  ZY.ChenLongSkill.drawIdle(ctx, 120, 120, 60, 1.5, 1, 0.2, 0.8);
+  ZY.ChenLongSkill.drawBreath(ctx, 8, 1.5, 22, 0.8);
+  ZY.ChenLongSkill.drawFireball(ctx, 1.5, 12);
+  ZY.ChenLongSkill.mouthPosition(120, 120, 60, 0.8, 1.5);
   ZY.ChenLongSkill.drawTrail(ctx, [{ x: 10, y: 10 }, { x: 25, y: 20 }], 45, 30, 60);
   ZY.ChenLongSkill.drawImpact(ctx, { x: 40, y: 40 }, 0.5);
 });
@@ -139,6 +143,7 @@ run('battle.draw', () => {
       { x: 40, y: 40, ang: 0.3, shape: '爪', gold: false, dmg: 10 },
       { x: 50, y: 50, ang: 0.3, shape: '翼', gold: false, dmg: 10 },
       { x: 60, y: 60, ang: 0.2, hero: '辰龙', gold: true, dmg: 10 },
+      { x: 65, y: 65, ang: 0.2, hero: '辰龙', fireball: true, trail: [{ x: 60, y: 60 }], gold: true, dmg: 10 },
       { x: 70, y: 70, ang: 0.2, hero: '巳蛇', gold: true, dmg: 10 },
       { x: 80, y: 80, ang: 0.2, hero: '辰龙', gold: true, weaponShape: 'dragonpearl', weaponColor: '#e8a23a', dmg: 10 },
       { x: 90, y: 90, ang: 0.2, hero: '子鼠', gold: true, weaponShape: 'claw', weaponColor: '#e8a23a', dmg: 10 }
@@ -150,7 +155,7 @@ run('battle.draw', () => {
   };
   // 各生肖技能特效
   ['ink', 'hit', 'text', 'slash', 'lance', 'roar', 'summon',
-    'ratwave', 'ratbite', 'oxcharge', 'tigerclaw', 'dragonclaw', 'poison'].forEach((t) => {
+    'ratwave', 'ratbite', 'oxcharge', 'tigerclaw', 'dragonclaw', 'fireburst', 'poison'].forEach((t) => {
     BT.fx(t, 120, 120, 0.4, 180);
   });
   BT.draw(ctx);
